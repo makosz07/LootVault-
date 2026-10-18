@@ -61,7 +61,7 @@ public final class WealthChart extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        if (points.size() < 2) return;
+        if (points.isEmpty()) return;
         float d = getResources().getDisplayMetrics().density;
         float left = 12 * d;
         float right = getWidth() - 12 * d;
@@ -83,6 +83,21 @@ public final class WealthChart extends View {
         for (int i = 0; i < 3; i++) {
             float y = top + (bottom - top) * i / 2f;
             canvas.drawLine(left, y, right, y, grid);
+        }
+
+        if (n == 1) {
+            float y = (float) (bottom - (points.get(0).value - low) / (high - low) * (bottom - top));
+            float x = (left + right) / 2f;
+            dot.setColor(BG);
+            canvas.drawCircle(x, y, 8 * d, dot);
+            dot.setColor(ACCENT);
+            canvas.drawCircle(x, y, 5.5f * d, dot);
+            label.setTextAlign(Paint.Align.LEFT);
+            canvas.drawText(money.format(points.get(0).value), left, top - 12 * d, label);
+            label.setTextAlign(Paint.Align.CENTER);
+            canvas.drawText(date.format(new Date(points.get(0).time)), x, getHeight() - 6 * d, label);
+            label.setTextAlign(Paint.Align.LEFT);
+            return;
         }
 
         path.reset();
