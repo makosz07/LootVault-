@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'LootVault-0.5.0.zip'
+      - '.github/workflows/install-from-zip.yml'
   workflow_dispatch:
 permissions:
   contents: write
@@ -41,6 +42,10 @@ jobs:
                       if entry.is_dir(): shutil.copytree(entry, target)
                       else: shutil.copy2(entry, target)
           PY
+          # The GitHub Actions token cannot modify workflow files.
+          # Keep the installer workflow unchanged and omit the build workflow.
+          git restore --source=HEAD -- .github/workflows/install-from-zip.yml
+          rm -f .github/workflows/android-apk.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
