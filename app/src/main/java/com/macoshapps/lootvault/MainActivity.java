@@ -688,7 +688,7 @@ public class MainActivity extends Activity {
 
     private void chartCard(String emptyMessage) {
         List<WealthChart.Point> points = snapshotPoints();
-        if (points.size() < 2) {
+        if (points.isEmpty()) {
             add(body, emptyState(emptyMessage));
             return;
         }
