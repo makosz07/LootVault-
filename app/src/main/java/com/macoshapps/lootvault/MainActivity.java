@@ -23,7 +23,7 @@ public class MainActivity extends Activity {
   if(page.equals("home"))home();else if(page.equals("assets"))assets();else if(page.equals("stats"))stats();else if(page.equals("settings"))settings();else if(page.equals("list"))list();else if(page.equals("detail"))detail();
   navigation();
  }
- void title(String small,String large){TextView eyebrow=txt(small.toUpperCase(java.util.Locale.ROOT),11,GOLD,true);add(body,eyebrow);gap(body,8);add(body,txt(large,29,WHITE,true));gap(body,18);}
+ void title(String small,String large){TextView eyebrow=txt(small.toUpperCase(java.util.Locale.ROOT),11,GOLD,true);eyebrow.setLetterSpacing(.14f);add(body,eyebrow);gap(body,8);add(body,txt(large,30,WHITE,true));gap(body,21);}
  String money(double n){return String.format(java.util.Locale.forLanguageTag("pl-PL"),"%,.2f zł",n);}
  String signed(double n){return (n>0?"+":"")+money(n);}
  String pct(double cost,double value){if(cost<=0)return "—";return String.format(java.util.Locale.forLanguageTag("pl-PL"),"%+.1f%%",(value-cost)/cost*100);}
@@ -38,7 +38,7 @@ public class MainActivity extends Activity {
  }
  void section(String s){gap(body,12);add(body,txt(s,21,WHITE,true));gap(body,12);}
  void home(){
-  title("LOOTVAULT",tr("Mój skarbiec","My vault","Mi tesoro"));
+  title(tr("TWÓJ MAJĄTEK","YOUR WEALTH","TU PATRIMONIO"),tr("Mój skarbiec","My vault","Mi tesoro"));
   double v=store.sum("value"),c=store.sum("purchase"),d=v-c;
   card(tr("Łączna wartość majątku","Total asset value","Valor total del patrimonio"),money(v),tr("Wynik względem zakupu: ","Return on cost: ","Resultado: ")+signed(d)+"  ("+pct(c,v)+")",d>=0?GREEN:RED,null);
   LinearLayout line=new LinearLayout(this);line.setOrientation(0);
@@ -55,9 +55,9 @@ public class MainActivity extends Activity {
  void chart(){JSONArray s=store.snapshots();if(s.length()<2){tile(tr("Brak wystarczającej historii","Not enough history","Historial insuficiente"),tr("Wykres pojawi się po kolejnych zmianach wartości.","Chart will appear after valuation updates.","El gráfico aparecerá tras nuevas valoraciones."),()->open("stats"));return;}WealthChart chart=new WealthChart(this,s);chart.setBackground(bg(CARD,18));body.addView(chart,new LinearLayout.LayoutParams(-1,dp(190)));gap(body,12);}
 
  void assets(){
-  title("LOOTVAULT",tr("Twoje zasoby","Your assets","Tus recursos"));
+  title(tr("TWOJA KOLEKCJA","YOUR COLLECTION","TU COLECCIÓN"),tr("Twoje zasoby","Your assets","Tus recursos"));
   add(body,txt(tr("Wszystko, co posiadasz, w jednym miejscu","Everything you own, in one place","Todo lo que posees, en un solo lugar"),14,MUTED,false));gap(body,18);
-  LinearLayout all=col();all.setPadding(dp(21),dp(22),dp(21),dp(22));all.setBackground(bg(0xff2a4169,23));
+  LinearLayout all=col();all.setPadding(dp(21),dp(22),dp(21),dp(22));all.setBackground(bg(0xff2a4169,23));all.setElevation(dp(4));
   add(all,txt("▤",27,0xffc4d8ff,true));gap(all,10);
   TextView allTitle=txt(tr("Wszystkie zasoby  ↗","All assets  ↗","Todos los recursos  ↗"),25,WHITE,true);add(all,allTitle);
   gap(all,8);add(all,txt(tr("Cała Twoja kolekcja","Your entire collection","Toda tu colección"),14,0xffcbd7e9,false));gap(all,15);
@@ -69,7 +69,7 @@ public class MainActivity extends Activity {
    final boolean create=i==types.length();final JSONObject type=create?null:types.optJSONObject(i);
    final String id=create?"":type.optString("id");int count=0;
    if(!create)for(int j=0;j<store.items().length();j++)if(id.equals(store.items().optJSONObject(j).optString("type")))count++;
-   LinearLayout card=col();card.setBackground(bg(CARD,20));card.setClipToOutline(true);
+   LinearLayout card=col();card.setBackground(bg(CARD,20));card.setClipToOutline(true);card.setElevation(dp(3));
    if(create){
     LinearLayout empty=col();empty.setGravity(Gravity.CENTER);empty.setBackground(bg(0xff223149,18));empty.setMinimumHeight(dp(155));
     TextView plus=txt("⊕",38,0xffaac7ff,true);plus.setGravity(Gravity.CENTER);add(empty,plus);gap(empty,10);
@@ -117,10 +117,11 @@ public class MainActivity extends Activity {
  JSONObject coverTarget;JSONObject pendingPhotoTarget;String pendingPhotoData="";
  EditText edit(String hint,String val){EditText e=new EditText(this);e.setTextColor(WHITE);e.setHintTextColor(MUTED);e.setHint(hint);e.setTextSize(15);e.setSingleLine(true);e.setBackground(bg(CARD2,12));padding(e,14);e.setText(val);return e;}
  void field(LinearLayout form,String label,EditText e){add(form,txt(label,13,MUTED,false));gap(form,6);add(form,e);gap(form,13);}
- void list(){title("LOOTVAULT",filter.isEmpty()?tr("Wszystkie zasoby","All assets","Todos los recursos"):store.typeName(filter));
+ void list(){title(tr("KOLEKCJA","COLLECTION","COLECCIÓN"),filter.isEmpty()?tr("Wszystkie zasoby","All assets","Todos los recursos"):store.typeName(filter));
   EditText query=edit(tr("Szukaj po nazwie lub kategorii","Search name or category","Buscar nombre o categoría"),search);
+  add(body,action(tr("+ Dodaj zasób","+ Add asset","+ Añadir recurso"),()->{if(filter.isEmpty())chooseType();else form(filter,null);}));gap(body,16);
   add(body,query);gap(body,14);query.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int st,int c,int a){}public void onTextChanged(CharSequence s,int st,int before,int count){search=s.toString();renderListItems();}public void afterTextChanged(android.text.Editable e){}});
-  listHost=col();add(body,listHost);renderListItems();gap(body,10);add(body,action(tr("+ Dodaj zasób","+ Add asset","+ Añadir recurso"),()->{if(filter.isEmpty())chooseType();else form(filter,null);}));
+  listHost=col();add(body,listHost);renderListItems();
  }
 
  LinearLayout listHost;
@@ -132,7 +133,7 @@ public class MainActivity extends Activity {
    String hay=(x.optString("name")+" "+x.optString("category")).toLowerCase(java.util.Locale.ROOT);
    if(!hay.contains(search.toLowerCase(java.util.Locale.ROOT)))continue;
    found++;String id=x.optString("id");double d=val(x)-cost(x);
-   LinearLayout card=new LinearLayout(this);card.setOrientation(0);card.setGravity(Gravity.CENTER_VERTICAL);card.setBackground(bg(CARD,17));card.setClipToOutline(true);
+   LinearLayout card=new LinearLayout(this);card.setOrientation(0);card.setGravity(Gravity.CENTER_VERTICAL);card.setBackground(bg(CARD,17));card.setClipToOutline(true);card.setElevation(dp(2));
    ImageView image=new ImageView(this);image.setScaleType(ImageView.ScaleType.CENTER_CROP);
    setAssetImage(image,x);
    card.addView(image,new LinearLayout.LayoutParams(dp(108),dp(118)));
@@ -167,21 +168,21 @@ public class MainActivity extends Activity {
   add(body,action(tr("Edytuj zasób","Edit asset","Editar recurso"),()->form(x.optString("type"),x)));gap(body,10);
   TextView del=txt(tr("Usuń zasób","Delete asset","Eliminar recurso"),14,RED,true);del.setGravity(Gravity.CENTER);padding(del,15);add(body,del);del.setOnClickListener(w->new AlertDialog.Builder(this).setMessage(tr("Usunąć ten zasób?","Delete this asset?","¿Eliminar este recurso?")).setPositiveButton(tr("Usuń","Delete","Eliminar"),(a,b)->{store.deleteItem(detailId);open("assets");}).setNegativeButton(tr("Anuluj","Cancel","Cancelar"),null).show());
  }
- void stats(){title("LOOTVAULT",tr("Statystyki","Statistics","Estadísticas"));double c=store.sum("purchase"),v=store.sum("value"),d=v-c;card(tr("Łączna wartość","Total value","Valor total"),money(v),signed(d)+"  ("+pct(c,v)+")",d>=0?GREEN:RED,null);
+ void stats(){title(tr("ANALIZA MAJĄTKU","WEALTH ANALYTICS","ANÁLISIS PATRIMONIAL"),tr("Statystyki","Statistics","Estadísticas"));double c=store.sum("purchase"),v=store.sum("value"),d=v-c;card(tr("Łączna wartość","Total value","Valor total"),money(v),signed(d)+"  ("+pct(c,v)+")",d>=0?GREEN:RED,null);
   tile(tr("Koszt nabycia","Acquisition cost","Coste de adquisición"),money(c),()->{});section(tr("Zmiany wartości majątku","Portfolio value history","Historial del patrimonio"));chart();section(tr("Podział majątku","Asset breakdown","Desglose del patrimonio"));
   for(int i=0;i<store.types().length();i++){JSONObject t=store.types().optJSONObject(i);String id=t.optString("id");double total=0,bought=0;for(int j=0;j<store.items().length();j++){JSONObject x=store.items().optJSONObject(j);if(id.equals(x.optString("type"))&&!x.optBoolean("demo",false)){total+=val(x);bought+=cost(x);}}double value=total,purchase=bought;tile(t.optString("name"),money(value)+"  •  "+signed(value-purchase)+"  ("+pct(purchase,value)+")",()->{filter=id;open("list");});}
  }
- void settings(){title("LOOTVAULT",tr("Ustawienia","Settings","Ajustes"));section(tr("Język","Language","Idioma"));tile("Polski / English / Español",lang.toUpperCase(java.util.Locale.ROOT),()->new AlertDialog.Builder(this).setItems(new String[]{"Polski","English","Español"},(d,i)->{lang=new String[]{"pl","en","es"}[i];try{store.data.put("language",lang);}catch(Exception ignored){}store.save();open("settings");}).show());
+ void settings(){title(tr("PERSONALIZACJA","PREFERENCES","PREFERENCIAS"),tr("Ustawienia","Settings","Ajustes"));section(tr("Język","Language","Idioma"));tile("Polski / English / Español",lang.toUpperCase(java.util.Locale.ROOT),()->new AlertDialog.Builder(this).setItems(new String[]{"Polski","English","Español"},(d,i)->{lang=new String[]{"pl","en","es"}[i];try{store.data.put("language",lang);}catch(Exception ignored){}store.save();open("settings");}).show());
   section(tr("Kopia zapasowa","Backup","Copia de seguridad"));tile(tr("Eksportuj JSON","Export JSON","Exportar JSON"),tr("Zapisz dane i historię wycen","Save assets and valuation history","Guardar recursos e historial"),()->{Intent in=new Intent(Intent.ACTION_CREATE_DOCUMENT);in.setType("application/json");in.addCategory(Intent.CATEGORY_OPENABLE);in.putExtra(Intent.EXTRA_TITLE,"lootvault-backup.json");startActivityForResult(in,11);});
   tile(tr("Importuj JSON","Import JSON","Importar JSON"),tr("Przywróć dane z kopii","Restore saved data","Restaurar datos"),()->{Intent in=new Intent(Intent.ACTION_OPEN_DOCUMENT);in.setType("application/json");in.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(in,12);});
   section(tr("O aplikacji","About","Acerca de"));tile("LootVault","Macosh Apps • 0.4.0",()->{});
  }
  void navigation(){
-  bottom=new LinearLayout(this);bottom.setBackgroundColor(CARD);bottom.setGravity(Gravity.CENTER_VERTICAL);
+  bottom=new LinearLayout(this);bottom.setBackgroundColor(0xff121c2c);bottom.setGravity(Gravity.CENTER_VERTICAL);
   String[] labels={tr("Pulpit","Home","Inicio"),tr("Zasoby","Assets","Recursos"),tr("Statystyki","Stats","Estadísticas"),tr("Ustawienia","Settings","Ajustes")};
   String[] icons={"⌂","▦","▥","⚙"};String[] tabs={"home","assets","stats","settings"};
-  for(int i=0;i<4;i++){String dest=tabs[i];LinearLayout cell=col();cell.setGravity(Gravity.CENTER);TextView ico=txt(icons[i],25,tab.equals(dest)?GOLD:MUTED,true);ico.setGravity(Gravity.CENTER);add(cell,ico);gap(cell,3);TextView label=txt(labels[i],11,tab.equals(dest)?WHITE:MUTED,tab.equals(dest));label.setSingleLine(true);label.setGravity(Gravity.CENTER);add(cell,label);bottom.addView(cell,new LinearLayout.LayoutParams(0,dp(78),1));cell.setOnClickListener(v->open(dest));}
-  root.addView(bottom,new LinearLayout.LayoutParams(-1,dp(78)));
+  for(int i=0;i<4;i++){String dest=tabs[i];LinearLayout cell=col();cell.setGravity(Gravity.CENTER);TextView ico=txt(icons[i],25,tab.equals(dest)?GOLD:MUTED,true);ico.setGravity(Gravity.CENTER);add(cell,ico);gap(cell,3);TextView label=txt(labels[i],11,tab.equals(dest)?WHITE:MUTED,tab.equals(dest));label.setSingleLine(true);label.setGravity(Gravity.CENTER);add(cell,label);bottom.addView(cell,new LinearLayout.LayoutParams(0,dp(82),1));cell.setOnClickListener(v->open(dest));}
+  root.addView(bottom,new LinearLayout.LayoutParams(-1,dp(82)));
  }
  void newType(){EditText e=edit(tr("Nazwa typu zasobu","Asset type name","Nombre del tipo"),"");LinearLayout box=col();padding(box,20);add(box,e);new AlertDialog.Builder(this).setTitle(tr("Nowy typ","New type","Nuevo tipo")).setView(box).setPositiveButton(tr("Zapisz","Save","Guardar"),(d,i)->{if(!e.getText().toString().trim().isEmpty()){store.addType(e.getText().toString().trim());open("assets");}}).setNegativeButton(tr("Anuluj","Cancel","Cancelar"),null).show();}
  void chooseType(){JSONArray a=store.types();if(a.length()==0){new AlertDialog.Builder(this).setMessage(tr("Najpierw utwórz typ zasobu.","Create an asset type first.","Primero crea un tipo.")).setPositiveButton("OK",(d,w)->newType()).show();return;}String[] names=new String[a.length()];for(int i=0;i<a.length();i++)names[i]=a.optJSONObject(i).optString("name");new AlertDialog.Builder(this).setTitle(tr("Wybierz typ","Choose type","Elige tipo")).setItems(names,(d,i)->form(a.optJSONObject(i).optString("id"),null)).show();}
