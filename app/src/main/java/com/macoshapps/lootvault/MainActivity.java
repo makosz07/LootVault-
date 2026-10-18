@@ -86,18 +86,58 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
-        Theme.density = getResources().getDisplayMetrics().density;
-        store = new VaultStore(this);
-        lang = store.language();
-        configureWindow();
-        buildShell();
-        String recovered = store.consumeRecoveredFile();
-        open("home");
-        if (recovered != null) {
-            toast(tr("Nie udało się odczytać danych. Oryginał zapisano jako " + recovered + ".",
-                    "The saved data could not be read. The original was kept as " + recovered + ".",
-                    "No se pudieron leer los datos. El original se guardó como " + recovered + "."));
+        try {
+            Theme.density = getResources().getDisplayMetrics().density;
+            store = new VaultStore(this);
+            lang = store.language();
+            configureWindow();
+            buildShell();
+            String recovered = store.consumeRecoveredFile();
+            open("home");
+            if (recovered != null) {
+                toast(tr("Nie udało się odczytać danych. Oryginał zapisano jako " + recovered + ".",
+                        "The saved data could not be read. The original was kept as " + recovered + ".",
+                        "No se pudieron leer los datos. El original se guardó como " + recovered + "."));
+            }
+        } catch (Exception startupError) {
+            android.util.Log.e("LootVault", "Startup failed; user data left intact", startupError);
+            showStartupFailure(startupError);
         }
+    }
+
+    /** Show the actual startup exception without deleting or resetting the user's vault. */
+    private void showStartupFailure(Exception error) {
+        LinearLayout diagnostic = new LinearLayout(this);
+        diagnostic.setOrientation(LinearLayout.VERTICAL);
+        diagnostic.setPadding(32, 40, 32, 32);
+        diagnostic.setBackgroundColor(0xFF0B1220);
+        TextView title = new TextView(this);
+        title.setText("LootVault — błąd uruchamiania");
+        title.setTextColor(0xFFFFFFFF);
+        title.setTextSize(21);
+        diagnostic.addView(title);
+        TextView message = new TextView(this);
+        StringBuilder details = new StringBuilder(error.toString());
+        for (StackTraceElement frame : error.getStackTrace()) {
+            if (details.length() > 3500) break;
+            details.append("\\n").append(frame.toString());
+        }
+        message.setText(details.toString());
+        message.setTextColor(0xFFB5C8E8);
+        message.setTextSize(12);
+        message.setTextIsSelectable(true);
+        diagnostic.addView(message);
+        android.widget.Button copy = new android.widget.Button(this);
+        copy.setText("Kopiuj szczegóły błędu");
+        copy.setOnClickListener(v -> {
+            android.content.ClipboardManager clipboard = (android.content.ClipboardManager)
+                    getSystemService(CLIPBOARD_SERVICE);
+            if (clipboard != null) clipboard.setPrimaryClip(
+                    android.content.ClipData.newPlainText("LootVault startup error", details.toString()));
+            Toast.makeText(this, "Skopiowano", Toast.LENGTH_SHORT).show();
+        });
+        diagnostic.addView(copy);
+        setContentView(diagnostic);
     }
 
     private void configureWindow() {
