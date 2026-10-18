@@ -1,0 +1,48 @@
+name: Install LootVault 0.5.0 from ZIP
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'LootVault-0.5.0.zip'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  replace-project:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Replace project from uploaded ZIP
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, shutil, tempfile, zipfile
+          archive = pathlib.Path('LootVault-0.5.0.zip')
+          if not archive.is_file():
+              raise SystemExit('Missing LootVault-0.5.0.zip')
+          with zipfile.ZipFile(archive) as z:
+              files = [i for i in z.infolist() if not i.is_dir()]
+              names = [i.filename for i in files]
+              required = ['settings.gradle','build.gradle','app/build.gradle','app/src/main/AndroidManifest.xml','.github/workflows/android-apk.yml']
+              if any(p not in names for p in required):
+                  raise SystemExit('Invalid project archive: missing required Android files')
+              if any(pathlib.PurePosixPath(n).is_absolute() or '..' in pathlib.PurePosixPath(n).parts for n in names):
+                  raise SystemExit('Unsafe archive paths')
+              with tempfile.TemporaryDirectory() as tmp:
+                  z.extractall(tmp)
+                  for entry in pathlib.Path('.').iterdir():
+                      if entry.name != '.git':
+                          if entry.is_dir(): shutil.rmtree(entry)
+                          else: entry.unlink()
+                  for entry in pathlib.Path(tmp).iterdir():
+                      target = pathlib.Path(entry.name)
+                      if entry.is_dir(): shutil.copytree(entry, target)
+                      else: shutil.copy2(entry, target)
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Replace project with LootVault 0.5.0"
+          git push origin HEAD:main
