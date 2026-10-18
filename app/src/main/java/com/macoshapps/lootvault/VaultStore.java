@@ -48,7 +48,7 @@ public final class VaultStore {
  public static double number(JSONObject x,String key,double fallback){if(!x.has(key))return fallback;return x.optDouble(key,fallback);}
  public static double quantity(JSONObject x){return Math.max(0,number(x,"quantity",1));}
  public static double price(JSONObject x,String key){return Math.max(0,number(x,key,0));}
- public double sum(String key){double v=0;for(int i=0;i<items().length();i++){JSONObject x=items().optJSONObject(i);if(x!=null&&!x.optBoolean("demo",false))v+=quantity(x)*price(x,key);}return Math.round(v*100.0)/100.0;}
+ public double sum(String key){java.math.BigDecimal total=java.math.BigDecimal.ZERO;for(int i=0;i<items().length();i++){JSONObject x=items().optJSONObject(i);if(x!=null&&!x.optBoolean("demo",false)){java.math.BigDecimal q=java.math.BigDecimal.valueOf(quantity(x));java.math.BigDecimal unit=java.math.BigDecimal.valueOf(price(x,key));total=total.add(q.multiply(unit));}}return total.setScale(2,java.math.RoundingMode.HALF_UP).doubleValue();}
  public int realCount(){int n=0;for(int i=0;i<items().length();i++)if(!items().optJSONObject(i).optBoolean("demo",false))n++;return n;}
  public void snapshot(){try{JSONObject x=new JSONObject();x.put("time",System.currentTimeMillis());x.put("value",sum("value"));x.put("purchase",sum("purchase"));snapshots().put(x);if(snapshots().length()>1500){JSONArray keep=new JSONArray();for(int i=snapshots().length()-1500;i<snapshots().length();i++)keep.put(snapshots().optJSONObject(i));data.put("snapshots",keep);}}catch(Exception ignored){}}
  public String exportJson(){try{JSONObject out=new JSONObject(data.toString());out.put("schema",2);out.put("exportedAt",System.currentTimeMillis());return out.toString(2);}catch(Exception e){return data.toString();}}
