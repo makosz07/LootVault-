@@ -17,7 +17,7 @@ public class MainActivity extends Activity {
   LinearLayout root,content,nav; JSONObject db=new JSONObject(); String screen="home", selected=""; int photoRequest=14;
   String language="pl"; Uri pendingPhoto; String editingId=null;
   String t(String pl,String en,String es){return language.equals("en")?en:language.equals("es")?es:pl;}
-  public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(bg);getWindow().setNavigationBarColor(bg);load();seedDemo();show("home");}
+  public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(bg);getWindow().setNavigationBarColor(bg);getWindow().getDecorView().setSystemUiVisibility(0);load();seedDemo();show("home");}
   void load(){try{db=new JSONObject(getPreferences(0).getString("db","{}"));if(!db.has("types"))db.put("types",new JSONArray());if(!db.has("items"))db.put("items",new JSONArray());language=db.optString("language","pl");}catch(Exception e){db=new JSONObject();try{db.put("types",new JSONArray());db.put("items",new JSONArray());}catch(Exception ignored){}}}
 
   void seedDemo(){
