@@ -53,12 +53,68 @@ public class MainActivity extends Activity {
  }
  void statBox(LinearLayout line,String label,String value){LinearLayout c=col();padding(c,16);c.setBackground(bg(CARD,15));add(c,txt(label,12,MUTED,false));gap(c,7);add(c,txt(value,22,WHITE,true));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);lp.setMargins(0,0,dp(8),0);line.addView(c,lp);}
  void chart(){JSONArray s=store.snapshots();if(s.length()<2){tile(tr("Brak wystarczającej historii","Not enough history","Historial insuficiente"),tr("Wykres pojawi się po kolejnych zmianach wartości.","Chart will appear after valuation updates.","El gráfico aparecerá tras nuevas valoraciones."),()->open("stats"));return;}WealthChart chart=new WealthChart(this,s);chart.setBackground(bg(CARD,18));body.addView(chart,new LinearLayout.LayoutParams(-1,dp(190)));gap(body,12);}
- void assets(){title("LOOTVAULT",tr("Zasoby","Assets","Recursos"));tile(tr("✦  Wszystkie zasoby","✦  All assets","✦  Todos los recursos"),store.items().length()+" "+tr("wpisów","entries","registros"),()->{filter="";search="";open("list");});
-  JSONArray types=store.types();for(int i=0;i<types.length();i++){JSONObject t=types.optJSONObject(i);String id=t.optString("id");int count=0;double total=0;for(int j=0;j<store.items().length();j++){JSONObject x=store.items().optJSONObject(j);if(id.equals(x.optString("type"))){count++;if(!x.optBoolean("demo",false))total+=val(x);}}
-   tile("▣  "+t.optString("name"),count+" • "+money(total),()->{filter=id;search="";open("list");});
+
+ void assets(){
+  title("LOOTVAULT",tr("Twoje zasoby","Your assets","Tus recursos"));
+  add(body,txt(tr("Wszystko, co posiadasz, w jednym miejscu","Everything you own, in one place","Todo lo que posees, en un solo lugar"),14,MUTED,false));gap(body,18);
+  LinearLayout all=col();all.setPadding(dp(21),dp(22),dp(21),dp(22));all.setBackground(bg(0xff2a4169,23));
+  add(all,txt("▤",27,0xffc4d8ff,true));gap(all,10);
+  TextView allTitle=txt(tr("Wszystkie zasoby  ↗","All assets  ↗","Todos los recursos  ↗"),25,WHITE,true);add(all,allTitle);
+  gap(all,8);add(all,txt(tr("Cała Twoja kolekcja","Your entire collection","Toda tu colección"),14,0xffcbd7e9,false));gap(all,15);
+  add(all,txt(""+store.items().length(),30,WHITE,true));add(body,all);gap(body,15);
+  all.setOnClickListener(v->{filter="";search="";open("list");});
+  LinearLayout gridRow=null;JSONArray types=store.types();
+  for(int i=0;i<types.length()+1;i++){
+   if(i%2==0){gridRow=new LinearLayout(this);gridRow.setOrientation(0);add(body,gridRow);gap(body,12);}
+   final boolean create=i==types.length();final JSONObject type=create?null:types.optJSONObject(i);
+   final String id=create?"":type.optString("id");int count=0;
+   if(!create)for(int j=0;j<store.items().length();j++)if(id.equals(store.items().optJSONObject(j).optString("type")))count++;
+   LinearLayout card=col();card.setBackground(bg(CARD,20));card.setClipToOutline(true);
+   if(create){
+    LinearLayout empty=col();empty.setGravity(Gravity.CENTER);empty.setBackground(bg(0xff223149,18));empty.setMinimumHeight(dp(155));
+    TextView plus=txt("⊕",38,0xffaac7ff,true);plus.setGravity(Gravity.CENTER);add(empty,plus);gap(empty,10);
+    TextView label=txt(tr("Nowy typ","New type","Nuevo tipo"),18,WHITE,true);label.setGravity(Gravity.CENTER);add(empty,label);
+    gap(empty,8);TextView sub=txt(tr("Utwórz własną kolekcję","Create a collection","Crea una colección"),12,MUTED,false);sub.setGravity(Gravity.CENTER);add(empty,sub);add(card,empty);
+    card.setOnClickListener(v->newType());
+   }else{
+    ImageView cover=new ImageView(this);cover.setScaleType(ImageView.ScaleType.CENTER_CROP);cover.setImageDrawable(new CoverDrawable(type.optString("name"),i));
+    String encoded=type.optString("coverData");if(!encoded.isEmpty())try{byte[] b=android.util.Base64.decode(encoded,0);cover.setImageBitmap(BitmapFactory.decodeByteArray(b,0,b.length));}catch(Exception ignored){}
+    card.addView(cover,new LinearLayout.LayoutParams(-1,dp(145)));
+    LinearLayout details=col();details.setPadding(dp(13),dp(14),dp(12),dp(16));
+    add(details,txt(type.optString("name"),17,WHITE,true));gap(details,7);
+    add(details,txt(count+" "+tr("zasobów","assets","recursos"),13,MUTED,false));add(card,details);
+    card.setOnClickListener(v->{filter=id;search="";open("list");});
+    card.setOnLongClickListener(v->{editType(type);return true;});
+   }
+   LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);if(i%2==0)lp.setMargins(0,0,dp(6),0);else lp.setMargins(dp(6),0,0,0);
+   gridRow.addView(card,lp);
   }
-  add(body,action(tr("+ Nowy typ zasobu","+ New asset type","+ Nuevo tipo de recurso"),()->newType()));
+  gap(body,8);add(body,txt(tr("Przytrzymaj kafelek, aby zmienić jego nazwę lub zdjęcie.","Long-press a tile to change its name or cover.","Mantén pulsada una tarjeta para cambiar su nombre o portada."),12,MUTED,false));
  }
+ class CoverDrawable extends android.graphics.drawable.Drawable {
+  final String name;final int index;final Paint paint=new Paint(3);
+  CoverDrawable(String n,int i){name=n.toLowerCase(java.util.Locale.ROOT);index=i;}
+  @Override public void draw(Canvas c){
+   android.graphics.Rect b=getBounds();float w=b.width(),h=b.height();int base=index%3==0?0xff25415d:index%3==1?0xff242b62:0xff59432e;
+   paint.setShader(new android.graphics.LinearGradient(0,0,w,h,base,0xff0c1526,android.graphics.Shader.TileMode.CLAMP));c.drawRect(b,paint);paint.setShader(null);
+   c.save();c.translate(b.left,b.top);
+   if(name.contains("ksi")||name.contains("book")||name.contains("libro")){
+    for(int i=0;i<7;i++){float x=w*(.07f+i*.135f);float top=h*(.22f+(i%3)*.07f);paint.setColor(new int[]{0xffba8553,0xff536f88,0xff7e5c67,0xffc1a678}[i%4]);c.drawRoundRect(x,top,x+w*.115f,h*.91f,dp(3),dp(3),paint);paint.setColor(0x88ffffff);c.drawRect(x+dp(4),top+dp(10),x+w*.115f-dp(4),top+dp(12),paint);}
+   }else if(name.contains("gr")||name.contains("game")||name.contains("juego")||name.contains("aplik")){
+    paint.setColor(0xff303f72);c.drawRoundRect(w*.16f,h*.22f,w*.85f,h*.78f,dp(23),dp(23),paint);paint.setColor(0xffa4bdf7);paint.setStrokeWidth(dp(5));float x=w*.37f,y=h*.49f;c.drawLine(x-dp(13),y,x+dp(13),y,paint);c.drawLine(x,y-dp(13),x,y+dp(13),paint);paint.setColor(0xffdca5d7);c.drawCircle(w*.69f,h*.43f,dp(6),paint);c.drawCircle(w*.75f,h*.55f,dp(6),paint);
+   }else{
+    paint.setColor(0xff3e5c6a);c.drawRoundRect(w*.1f,h*.28f,w*.42f,h*.82f,dp(12),dp(12),paint);paint.setColor(0xff718fa1);c.drawCircle(w*.26f,h*.43f,dp(17),paint);paint.setColor(0xff9e825a);c.drawRoundRect(w*.52f,h*.22f,w*.86f,h*.8f,dp(10),dp(10),paint);paint.setColor(0xffd2b78e);c.drawRect(w*.57f,h*.35f,w*.8f,h*.39f,paint);
+   }
+   c.restore();
+  }
+  @Override public void setAlpha(int a){}@Override public void setColorFilter(android.graphics.ColorFilter f){}@Override public int getOpacity(){return android.graphics.PixelFormat.OPAQUE;}
+ }
+ void editType(JSONObject type){
+  LinearLayout form=col();padding(form,18);EditText name=edit(tr("Nazwa typu","Type name","Nombre del tipo"),type.optString("name"));add(form,name);gap(form,14);
+  TextView coverButton=action(tr("Wybierz zdjęcie okładki","Choose cover image","Elegir portada"),()->{Intent in=new Intent(Intent.ACTION_OPEN_DOCUMENT);in.setType("image/*");in.addCategory(Intent.CATEGORY_OPENABLE);coverTarget=type;startActivityForResult(in,14);});add(form,coverButton);
+  new AlertDialog.Builder(this).setTitle(tr("Edytuj typ zasobu","Edit asset type","Editar tipo de recurso")).setView(form).setPositiveButton(tr("Zapisz","Save","Guardar"),(d,w)->{try{if(!name.getText().toString().trim().isEmpty())type.put("name",name.getText().toString().trim());store.save();open("assets");}catch(Exception ignored){}}).setNegativeButton(tr("Anuluj","Cancel","Cancelar"),null).show();
+ }
+ JSONObject coverTarget;
  EditText edit(String hint,String val){EditText e=new EditText(this);e.setTextColor(WHITE);e.setHintTextColor(MUTED);e.setHint(hint);e.setTextSize(15);e.setSingleLine(true);e.setBackground(bg(CARD2,12));padding(e,14);e.setText(val);return e;}
  void field(LinearLayout form,String label,EditText e){add(form,txt(label,13,MUTED,false));gap(form,6);add(form,e);gap(form,13);}
  void list(){title("LOOTVAULT",filter.isEmpty()?tr("Wszystkie zasoby","All assets","Todos los recursos"):store.typeName(filter));
@@ -132,6 +188,6 @@ public class MainActivity extends Activity {
  @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);if(result!=RESULT_OK||data==null||data.getData()==null)return;Uri uri=data.getData();try{
   if(request==11){try(OutputStream out=getContentResolver().openOutputStream(uri)){out.write(store.exportJson().getBytes("UTF-8"));}Toast.makeText(this,tr("Kopia zapisana","Backup saved","Copia guardada"),0).show();}
   if(request==12){ByteArrayOutputStream out=new ByteArrayOutputStream();try(InputStream in=getContentResolver().openInputStream(uri)){byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)out.write(b,0,n);}String json=out.toString("UTF-8");new AlertDialog.Builder(this).setMessage(tr("Import zastąpi obecne dane. Kontynuować?","Import replaces current data. Continue?","La importación reemplazará los datos. ¿Continuar?")).setPositiveButton("OK",(d,w)->{try{store.importJson(json);lang=store.data.optString("language","pl");open("home");}catch(Exception e){Toast.makeText(this,e.getMessage(),1).show();}}).setNegativeButton(tr("Anuluj","Cancel","Cancelar"),null).show();}
-  if(request==13){if(photoTarget!=null){Bitmap source=BitmapFactory.decodeStream(getContentResolver().openInputStream(uri));if(source==null)throw new Exception("Invalid image");int w=source.getWidth(),h=source.getHeight();float scale=Math.min(1f,1024f/Math.max(w,h));Bitmap scaled=Bitmap.createScaledBitmap(source,Math.max(1,(int)(w*scale)),Math.max(1,(int)(h*scale)),true);ByteArrayOutputStream out=new ByteArrayOutputStream();scaled.compress(Bitmap.CompressFormat.JPEG,80,out);photoTarget.put("photoData",android.util.Base64.encodeToString(out.toByteArray(),android.util.Base64.NO_WRAP));store.save();open("detail");}else Toast.makeText(this,tr("Najpierw zapisz zasób.","Save the asset first.","Primero guarda el recurso."),1).show();}
+  if(request==14){if(coverTarget!=null){Bitmap source=BitmapFactory.decodeStream(getContentResolver().openInputStream(uri));if(source==null)throw new Exception("Invalid cover");float scale=Math.min(1f,900f/Math.max(source.getWidth(),source.getHeight()));Bitmap scaled=Bitmap.createScaledBitmap(source,Math.max(1,(int)(source.getWidth()*scale)),Math.max(1,(int)(source.getHeight()*scale)),true);ByteArrayOutputStream out=new ByteArrayOutputStream();scaled.compress(Bitmap.CompressFormat.JPEG,82,out);coverTarget.put("coverData",android.util.Base64.encodeToString(out.toByteArray(),android.util.Base64.NO_WRAP));store.save();open("assets");}}if(request==13){if(photoTarget!=null){Bitmap source=BitmapFactory.decodeStream(getContentResolver().openInputStream(uri));if(source==null)throw new Exception("Invalid image");int w=source.getWidth(),h=source.getHeight();float scale=Math.min(1f,1024f/Math.max(w,h));Bitmap scaled=Bitmap.createScaledBitmap(source,Math.max(1,(int)(w*scale)),Math.max(1,(int)(h*scale)),true);ByteArrayOutputStream out=new ByteArrayOutputStream();scaled.compress(Bitmap.CompressFormat.JPEG,80,out);photoTarget.put("photoData",android.util.Base64.encodeToString(out.toByteArray(),android.util.Base64.NO_WRAP));store.save();open("detail");}else Toast.makeText(this,tr("Najpierw zapisz zasób.","Save the asset first.","Primero guarda el recurso."),1).show();}
  }catch(Exception e){Toast.makeText(this,e.toString(),1).show();}}
 }
