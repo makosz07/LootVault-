@@ -114,7 +114,7 @@ public class MainActivity extends Activity {
   TextView coverButton=action(tr("Wybierz zdjęcie okładki","Choose cover image","Elegir portada"),()->{Intent in=new Intent(Intent.ACTION_OPEN_DOCUMENT);in.setType("image/*");in.addCategory(Intent.CATEGORY_OPENABLE);coverTarget=type;startActivityForResult(in,14);});add(form,coverButton);
   new AlertDialog.Builder(this).setTitle(tr("Edytuj typ zasobu","Edit asset type","Editar tipo de recurso")).setView(form).setPositiveButton(tr("Zapisz","Save","Guardar"),(d,w)->{try{if(!name.getText().toString().trim().isEmpty())type.put("name",name.getText().toString().trim());store.save();open("assets");}catch(Exception ignored){}}).setNegativeButton(tr("Anuluj","Cancel","Cancelar"),null).show();
  }
- JSONObject coverTarget;
+ JSONObject coverTarget;JSONObject pendingPhotoTarget;String pendingPhotoData="";
  EditText edit(String hint,String val){EditText e=new EditText(this);e.setTextColor(WHITE);e.setHintTextColor(MUTED);e.setHint(hint);e.setTextSize(15);e.setSingleLine(true);e.setBackground(bg(CARD2,12));padding(e,14);e.setText(val);return e;}
  void field(LinearLayout form,String label,EditText e){add(form,txt(label,13,MUTED,false));gap(form,6);add(form,e);gap(form,13);}
  void list(){title("LOOTVAULT",filter.isEmpty()?tr("Wszystkie zasoby","All assets","Todos los recursos"):store.typeName(filter));
@@ -122,9 +122,38 @@ public class MainActivity extends Activity {
   add(body,query);gap(body,14);query.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int st,int c,int a){}public void onTextChanged(CharSequence s,int st,int before,int count){search=s.toString();renderListItems();}public void afterTextChanged(android.text.Editable e){}});
   listHost=col();add(body,listHost);renderListItems();gap(body,10);add(body,action(tr("+ Dodaj zasób","+ Add asset","+ Añadir recurso"),()->{if(filter.isEmpty())chooseType();else form(filter,null);}));
  }
- LinearLayout listHost;void renderListItems(){if(listHost==null)return;listHost.removeAllViews();int found=0;for(int i=store.items().length()-1;i>=0;i--){JSONObject x=store.items().optJSONObject(i);if(!filter.isEmpty()&&!filter.equals(x.optString("type")))continue;String hay=(x.optString("name")+" "+x.optString("category")).toLowerCase(java.util.Locale.ROOT);if(!hay.contains(search.toLowerCase(java.util.Locale.ROOT)))continue;found++;String id=x.optString("id");double d=val(x)-cost(x);
-   LinearLayout c=col();padding(c,15);c.setBackground(bg(CARD,15));add(c,txt(x.optString("name")+(x.optBoolean("demo",false)?"  • DEMO":""),17,WHITE,true));gap(c,5);add(c,txt(store.typeName(x.optString("type"))+"  •  "+money(val(x)),13,MUTED,false));gap(c,4);add(c,txt(signed(d)+"  "+pct(cost(x),val(x)),13,d>=0?GREEN:RED,true));add(listHost,c);gap(listHost,9);c.setOnClickListener(v->{detailId=id;open("detail");});
-  }if(found==0)add(listHost,txt(tr("Brak pasujących zasobów","No matching assets","Sin recursos coincidentes"),14,MUTED,false));}
+
+ LinearLayout listHost;
+ void renderListItems(){
+  if(listHost==null)return;listHost.removeAllViews();int found=0;
+  for(int i=store.items().length()-1;i>=0;i--){
+   JSONObject x=store.items().optJSONObject(i);
+   if(!filter.isEmpty()&&!filter.equals(x.optString("type")))continue;
+   String hay=(x.optString("name")+" "+x.optString("category")).toLowerCase(java.util.Locale.ROOT);
+   if(!hay.contains(search.toLowerCase(java.util.Locale.ROOT)))continue;
+   found++;String id=x.optString("id");double d=val(x)-cost(x);
+   LinearLayout card=new LinearLayout(this);card.setOrientation(0);card.setGravity(Gravity.CENTER_VERTICAL);card.setBackground(bg(CARD,17));card.setClipToOutline(true);
+   ImageView image=new ImageView(this);image.setScaleType(ImageView.ScaleType.CENTER_CROP);
+   setAssetImage(image,x);
+   card.addView(image,new LinearLayout.LayoutParams(dp(108),dp(118)));
+   LinearLayout info=col();info.setPadding(dp(13),dp(12),dp(9),dp(12));
+   add(info,txt(x.optString("name")+(x.optBoolean("demo",false)?" • DEMO":""),16,WHITE,true));gap(info,6);
+   add(info,txt(store.typeName(x.optString("type"))+" • "+money(val(x)),12,MUTED,false));gap(info,7);
+   add(info,txt(signed(d)+"  "+pct(cost(x),val(x)),13,d>=0?GREEN:RED,true));
+   card.addView(info,new LinearLayout.LayoutParams(0,-2,1));
+   add(listHost,card);gap(listHost,10);card.setOnClickListener(v->{detailId=id;open("detail");});
+  }
+  if(found==0)add(listHost,txt(tr("Brak pasujących zasobów","No matching assets","Sin recursos coincidentes"),14,MUTED,false));
+ }
+ void setAssetImage(ImageView view,JSONObject x){
+  String encoded=x.optString("photoData");
+  if(!encoded.isEmpty())try{
+   byte[] bytes=android.util.Base64.decode(encoded,android.util.Base64.DEFAULT);
+   Bitmap image=BitmapFactory.decodeByteArray(bytes,0,bytes.length);
+   if(image!=null){view.setImageBitmap(image);return;}
+  }catch(Exception ignored){}
+  view.setImageDrawable(new CoverDrawable(store.typeName(x.optString("type")),Math.abs(x.optString("name").hashCode()%3)));
+ }
  String detailId="";
  void detail(){JSONObject x=store.byId(detailId);if(x==null){open("assets");return;}title(store.typeName(x.optString("type")),x.optString("name"));if(x.optString("photoData").length()>0){ImageView image=new ImageView(this);image.setScaleType(ImageView.ScaleType.CENTER_CROP);try{byte[] bytes=android.util.Base64.decode(x.optString("photoData"),android.util.Base64.DEFAULT);image.setImageBitmap(BitmapFactory.decodeByteArray(bytes,0,bytes.length));body.addView(image,new LinearLayout.LayoutParams(-1,dp(220)));gap(body,15);}catch(Exception ignored){}}else if(x.optString("photo").length()>0){ImageView image=new ImageView(this);image.setScaleType(ImageView.ScaleType.CENTER_CROP);try{image.setImageURI(Uri.parse(x.optString("photo")));body.addView(image,new LinearLayout.LayoutParams(-1,dp(220)));gap(body,15);}catch(Exception ignored){}}
   double c=cost(x),v=val(x),d=v-c;card(tr("Aktualna wartość","Current value","Valor actual"),money(v),signed(d)+"  ("+pct(c,v)+")",d>=0?GREEN:RED,null);
@@ -158,6 +187,7 @@ public class MainActivity extends Activity {
  void chooseType(){JSONArray a=store.types();if(a.length()==0){new AlertDialog.Builder(this).setMessage(tr("Najpierw utwórz typ zasobu.","Create an asset type first.","Primero crea un tipo.")).setPositiveButton("OK",(d,w)->newType()).show();return;}String[] names=new String[a.length()];for(int i=0;i<a.length();i++)names[i]=a.optJSONObject(i).optString("name");new AlertDialog.Builder(this).setTitle(tr("Wybierz typ","Choose type","Elige tipo")).setItems(names,(d,i)->form(a.optJSONObject(i).optString("id"),null)).show();}
  double number(EditText e,double fallback){try{return Math.max(0,Double.parseDouble(e.getText().toString().trim().replace(",",".")));}catch(Exception ex){return fallback;}}
  void form(String type,JSONObject existing){
+  pendingPhotoTarget=existing;pendingPhotoData="";
   ScrollView scroll=new ScrollView(this);LinearLayout box=col();padding(box,dp(18));scroll.addView(box);
   EditText name=edit(tr("Nazwa","Name","Nombre"),existing==null?"":existing.optString("name"));
   EditText cat=edit(tr("Kategoria","Category","Categoría"),existing==null?"":existing.optString("category"));
@@ -171,11 +201,11 @@ public class MainActivity extends Activity {
   field(box,tr("Ilość","Quantity","Cantidad"),qty);field(box,tr("Cena zakupu / szt.","Purchase cost / unit","Coste / unidad"),purchase);
   field(box,tr("Aktualna wartość / szt.","Current value / unit","Valor / unidad"),value);
   field(box,tr("Miejsce przechowywania","Storage location","Ubicación"),loc);field(box,tr("Notatki","Notes","Notas"),notes);
-  TextView pick=action(tr("Wybierz zdjęcie","Choose photo","Elegir foto"),()->{if(existing!=null)pickPhoto(existing);else Toast.makeText(this,tr("Najpierw zapisz zasób, potem dodaj zdjęcie.","Save the asset first, then add a photo.","Guarda el recurso antes de añadir foto."),1).show();});add(box,pick);
+  TextView pick=action(tr("Wybierz zdjęcie","Choose photo","Elegir foto"),()->{pendingPhotoTarget=existing;Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT);intent.setType("image/*");intent.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(intent,15);});add(box,pick);
   AlertDialog dialog=new AlertDialog.Builder(this).setTitle(existing==null?tr("Nowy zasób","New asset","Nuevo recurso"):tr("Edytuj zasób","Edit asset","Editar recurso")).setView(scroll).setPositiveButton(tr("Zapisz","Save","Guardar"),null).setNegativeButton(tr("Anuluj","Cancel","Cancelar"),null).create();
   dialog.setOnShowListener(d->dialog.getButton(-1).setOnClickListener(v->{if(name.getText().toString().trim().isEmpty()){name.setError(tr("Wpisz nazwę","Enter a name","Introduce un nombre"));return;}
    try{JSONObject x=existing==null?new JSONObject():existing;double old=VaultStore.price(x,"value"),current=number(value,0);if(existing==null){x.put("id",VaultStore.id());x.put("type",type);}
-    x.put("demo",false);x.put("name",name.getText().toString().trim());x.put("category",cat.getText().toString());x.put("quantity",number(qty,1));x.put("purchase",number(purchase,0));x.put("value",current);x.put("location",loc.getText().toString());x.put("notes",notes.getText().toString());
+    x.put("demo",false);if(!pendingPhotoData.isEmpty())x.put("photoData",pendingPhotoData);x.put("name",name.getText().toString().trim());x.put("category",cat.getText().toString());x.put("quantity",number(qty,1));x.put("purchase",number(purchase,0));x.put("value",current);x.put("location",loc.getText().toString());x.put("notes",notes.getText().toString());
     if(existing==null)store.items().put(x);if(existing==null||old!=current){JSONArray h=x.optJSONArray("history");if(h==null){h=new JSONArray();x.put("history",h);}JSONObject point=new JSONObject();point.put("time",System.currentTimeMillis());point.put("value",current);h.put(point);}
     store.snapshot();store.save();dialog.dismiss();filter=type;open("list");
    }catch(Exception e){Toast.makeText(this,e.toString(),Toast.LENGTH_LONG).show();}
@@ -188,6 +218,6 @@ public class MainActivity extends Activity {
  @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);if(result!=RESULT_OK||data==null||data.getData()==null)return;Uri uri=data.getData();try{
   if(request==11){try(OutputStream out=getContentResolver().openOutputStream(uri)){out.write(store.exportJson().getBytes("UTF-8"));}Toast.makeText(this,tr("Kopia zapisana","Backup saved","Copia guardada"),0).show();}
   if(request==12){ByteArrayOutputStream out=new ByteArrayOutputStream();try(InputStream in=getContentResolver().openInputStream(uri)){byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)out.write(b,0,n);}String json=out.toString("UTF-8");new AlertDialog.Builder(this).setMessage(tr("Import zastąpi obecne dane. Kontynuować?","Import replaces current data. Continue?","La importación reemplazará los datos. ¿Continuar?")).setPositiveButton("OK",(d,w)->{try{store.importJson(json);lang=store.data.optString("language","pl");open("home");}catch(Exception e){Toast.makeText(this,e.getMessage(),1).show();}}).setNegativeButton(tr("Anuluj","Cancel","Cancelar"),null).show();}
-  if(request==14){if(coverTarget!=null){Bitmap source=BitmapFactory.decodeStream(getContentResolver().openInputStream(uri));if(source==null)throw new Exception("Invalid cover");float scale=Math.min(1f,900f/Math.max(source.getWidth(),source.getHeight()));Bitmap scaled=Bitmap.createScaledBitmap(source,Math.max(1,(int)(source.getWidth()*scale)),Math.max(1,(int)(source.getHeight()*scale)),true);ByteArrayOutputStream out=new ByteArrayOutputStream();scaled.compress(Bitmap.CompressFormat.JPEG,82,out);coverTarget.put("coverData",android.util.Base64.encodeToString(out.toByteArray(),android.util.Base64.NO_WRAP));store.save();open("assets");}}if(request==13){if(photoTarget!=null){Bitmap source=BitmapFactory.decodeStream(getContentResolver().openInputStream(uri));if(source==null)throw new Exception("Invalid image");int w=source.getWidth(),h=source.getHeight();float scale=Math.min(1f,1024f/Math.max(w,h));Bitmap scaled=Bitmap.createScaledBitmap(source,Math.max(1,(int)(w*scale)),Math.max(1,(int)(h*scale)),true);ByteArrayOutputStream out=new ByteArrayOutputStream();scaled.compress(Bitmap.CompressFormat.JPEG,80,out);photoTarget.put("photoData",android.util.Base64.encodeToString(out.toByteArray(),android.util.Base64.NO_WRAP));store.save();open("detail");}else Toast.makeText(this,tr("Najpierw zapisz zasób.","Save the asset first.","Primero guarda el recurso."),1).show();}
+  if(request==15){Bitmap source=BitmapFactory.decodeStream(getContentResolver().openInputStream(uri));if(source==null)throw new Exception("Invalid image");float scale=Math.min(1f,1024f/Math.max(source.getWidth(),source.getHeight()));Bitmap scaled=Bitmap.createScaledBitmap(source,Math.max(1,(int)(source.getWidth()*scale)),Math.max(1,(int)(source.getHeight()*scale)),true);ByteArrayOutputStream out=new ByteArrayOutputStream();scaled.compress(Bitmap.CompressFormat.JPEG,80,out);pendingPhotoData=android.util.Base64.encodeToString(out.toByteArray(),android.util.Base64.NO_WRAP);if(pendingPhotoTarget!=null){pendingPhotoTarget.put("photoData",pendingPhotoData);store.save();}Toast.makeText(this,tr("Zdjęcie wybrane","Photo selected","Foto seleccionada"),0).show();}if(request==14){if(coverTarget!=null){Bitmap source=BitmapFactory.decodeStream(getContentResolver().openInputStream(uri));if(source==null)throw new Exception("Invalid cover");float scale=Math.min(1f,900f/Math.max(source.getWidth(),source.getHeight()));Bitmap scaled=Bitmap.createScaledBitmap(source,Math.max(1,(int)(source.getWidth()*scale)),Math.max(1,(int)(source.getHeight()*scale)),true);ByteArrayOutputStream out=new ByteArrayOutputStream();scaled.compress(Bitmap.CompressFormat.JPEG,82,out);coverTarget.put("coverData",android.util.Base64.encodeToString(out.toByteArray(),android.util.Base64.NO_WRAP));store.save();open("assets");}}if(request==13){if(photoTarget!=null){Bitmap source=BitmapFactory.decodeStream(getContentResolver().openInputStream(uri));if(source==null)throw new Exception("Invalid image");int w=source.getWidth(),h=source.getHeight();float scale=Math.min(1f,1024f/Math.max(w,h));Bitmap scaled=Bitmap.createScaledBitmap(source,Math.max(1,(int)(w*scale)),Math.max(1,(int)(h*scale)),true);ByteArrayOutputStream out=new ByteArrayOutputStream();scaled.compress(Bitmap.CompressFormat.JPEG,80,out);photoTarget.put("photoData",android.util.Base64.encodeToString(out.toByteArray(),android.util.Base64.NO_WRAP));store.save();open("detail");}else Toast.makeText(this,tr("Najpierw zapisz zasób.","Save the asset first.","Primero guarda el recurso."),1).show();}
  }catch(Exception e){Toast.makeText(this,e.toString(),1).show();}}
 }
