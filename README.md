@@ -1,1 +1,1 @@
-# LootVault-
+# LootVault
