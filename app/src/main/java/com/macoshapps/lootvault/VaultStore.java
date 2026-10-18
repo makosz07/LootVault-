@@ -15,8 +15,25 @@ public final class VaultStore {
    if(!data.has("items"))data.put("items",new JSONArray());
    if(!data.has("snapshots"))data.put("snapshots",new JSONArray());
    if(!data.has("schema"))data.put("schema",2);
-   save();
+   seedSamples();save();
   }catch(Exception e){Log.e("LootVault","load",e);data=new JSONObject();try{data.put("types",new JSONArray());data.put("items",new JSONArray());data.put("snapshots",new JSONArray());}catch(Exception ignored){}}
+ }
+
+ /** Demo data is clearly marked and excluded from the real financial dashboard. */
+ private void seedSamples(){
+  try{
+   if(data.optBoolean("starterCreated",false)||types().length()>0||items().length()>0)return;
+   String[][] samples={
+    {"Przedmioty","Laptop","Słuchawki","Plecak","Zegarek","Aparat fotograficzny"},
+    {"Gry i aplikacje","Minecraft","Stardew Valley","Terraria","Hollow Knight","Blender"},
+    {"Książki","Sapiens","Atomowe nawyki","Medytacje","Władca Pierścieni","Zbrodnia i kara"}
+   };
+   for(String[] group:samples){
+    String typeId=id();JSONObject type=new JSONObject();type.put("id",typeId);type.put("name",group[0]);types().put(type);
+    for(int i=1;i<group.length;i++){JSONObject x=new JSONObject();x.put("id",id());x.put("type",typeId);x.put("name",group[i]);x.put("category","Przykładowe");x.put("demo",true);x.put("quantity",1);x.put("purchase",0);x.put("value",0);items().put(x);}
+   }
+   data.put("starterCreated",true);
+  }catch(Exception e){Log.e("LootVault","demo",e);}
  }
  public void save(){try{
   File f=new File(context.getFilesDir(),"vault.json");File tmp=new File(context.getFilesDir(),"vault.tmp");
