@@ -145,10 +145,19 @@ public class MainActivity extends Activity {
         window.setStatusBarColor(Color.TRANSPARENT);
         window.setNavigationBarColor(Color.TRANSPARENT);
         if (Build.VERSION.SDK_INT >= 30) {
+            // The decor view is not attached during Activity.onCreate. Calling
+            // Window.getInsetsController() here crashes on some Android 15/16 devices.
             window.setDecorFitsSystemWindows(false);
-            window.getInsetsController().setSystemBarsAppearance(0,
-                    WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
-                            | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
+            View decor = window.getDecorView();
+            decor.post(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                WindowInsetsController controller = decor.getWindowInsetsController();
+                if (controller != null) {
+                    controller.setSystemBarsAppearance(0,
+                            WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+                                    | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
+                }
+            });
         } else {
             window.getDecorView().setSystemUiVisibility(
                     View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
